@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="競りマスター">
+<title>競りマスター</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: 'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;
+  background: #1a1a2e; min-height: 100vh;
+  max-width: 430px; margin: 0 auto; color: #fff;
+}
+.header {
+  background: #16213e; border-bottom: 2px solid #e94560;
+  padding: 13px 16px; position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 10px;
+}
+.header-title { font-size: 16px; font-weight: 700; }
+.header-sub { font-size: 10px; color: #a0a0c0; margin-top: 1px; }
+.tabs {
+  display: flex; background: #16213e;
+  border-bottom: 2px solid #0f3460; position: sticky; top: 52px; z-index: 19;
+}
+.tab {
+  flex: 1; padding: 11px 0; font-size: 11px; font-weight: 700;
+  text-align: center; cursor: pointer; color: #a0a0c0;
+  border-bottom: 3px solid transparent; font-family: inherit;
+  background: none; border-top: none; border-left: none; border-right: none;
+}
+.tab.active { color: #e94560; border-bottom-color: #e94560; }
+.page { padding: 16px 16px 40px; display: flex; flex-direction: column; gap: 14px; }
+.card { background: #16213e; border-radius: 14px; padding: 16px; border: 1px solid #0f3460; }
+.card-title { font-size: 13px; font-weight: 700; color: #e94560; margin-bottom: 12px; }
+
+/* ゲーム共通 */
+.game-score {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #0f3460; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px;
+}
+.score-item { text-align: center; }
+.score-num { font-size: 22px; font-weight: 900; color: #ffd700; }
+.score-label { font-size: 10px; color: #a0a0c0; margin-top: 2px; }
+
+.question-box {
+  background: #0f3460; border-radius: 12px; padding: 20px;
+  text-align: center; margin-bottom: 14px;
+}
+.question-main { font-size: 36px; font-weight: 900; color: #fff; margin-bottom: 8px; }
+.question-sub { font-size: 13px; color: #a0a0c0; }
+
+.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.choice-btn {
+  padding: 14px 8px; border-radius: 10px; font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: inherit; border: 2px solid #0f3460;
+  background: #0f3460; color: #fff; transition: all .15s; text-align: center;
+}
+.choice-btn.correct { background: #1a4a2e; border-color: #48bb78; color: #48bb78; }
+.choice-btn.wrong { background: #4a1a1a; border-color: #e94560; color: #e94560; }
+.choice-btn.reveal { background: #1a4a2e; border-color: #48bb78; color: #48bb78; }
+.choice-btn:disabled { cursor: default; }
+
+.result-box {
+  border-radius: 12px; padding: 16px; text-align: center; margin-top: 4px;
+}
+.result-correct { background: #1a4a2e; border: 2px solid #48bb78; }
+.result-wrong { background: #4a1a1a; border: 2px solid #e94560; }
+.result-text { font-size: 18px; font-weight: 900; margin-bottom: 6px; }
+.result-desc { font-size: 12px; color: #d0d0e0; }
+
+.next-btn {
+  width: 100%; padding: 14px; background: #e94560; color: #fff;
+  border: none; border-radius: 12px; font-size: 15px; font-weight: 700;
+  cursor: pointer; font-family: inherit; margin-top: 10px;
+}
+
+/* タイマー */
+.timer-bar-wrap { background: #0f3460; border-radius: 6px; height: 8px; margin-bottom: 12px; overflow: hidden; }
+.timer-bar { height: 100%; background: #e94560; border-radius: 6px; transition: width .1s linear; }
+
+/* 結果画面 */
+.final-box { text-align: center; padding: 20px; }
+.final-score { font-size: 56px; font-weight: 900; color: #ffd700; }
+.final-rank { font-size: 20px; font-weight: 700; margin: 8px 0; }
+.final-msg { font-size: 13px; color: #a0a0c0; margin-bottom: 20px; }
+.restart-btn {
+  width: 100%; padding: 16px; background: #e94560; color: #fff;
+  border: none; border-radius: 14px; font-size: 16px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+}
+
+/* モード選択 */
+.mode-btn {
+  width: 100%; padding: 18px 16px; background: #0f3460; color: #fff;
+  border: 2px solid #e94560; border-radius: 14px; font-size: 15px;
+  font-weight: 700; cursor: pointer; font-family: inherit; text-align: left;
+  margin-bottom: 10px;
+}
+.mode-btn-sub { font-size: 11px; color: #a0a0c0; font-weight: 400; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+
+// ── データ ──────────────────────────────────
+const FUCHYO_ALL = [
+  { price: 1000, yomi: "センエン" }, { price: 1500, yomi: "センゴ" },
+  { price: 2000, yomi: "ニー" }, { price: 2500, yomi: "ニーゴー" },
+  { price: 3000, yomi: "サン" }, { price: 3500, yomi: "サンゴ" },
+  { price: 4000, yomi: "シ" }, { price: 4500, yomi: "シーゴ" },
+  { price: 5000, yomi: "ゴセン" }, { price: 5500, yomi: "ゴーゴ" },
+  { price: 6000, yomi: "ロク" }, { price: 6500, yomi: "ロクゴ" },
+  { price: 7000, yomi: "ナナ" }, { price: 7500, yomi: "ナナゴ" },
+  { price: 8000, yomi: "ハチ" }, { price: 8500, yomi: "パーゴ" },
+  { price: 9000, yomi: "キュー" }, { price: 9500, yomi: "キューゴ" },
+  { price: 10000, yomi: "ドン" }, { price: 11000, yomi: "イチイチ" },
+  { price: 12000, yomi: "イチニー" }, { price: 13000, yomi: "イチサン" },
+  { price: 14000, yomi: "イチシ" }, { price: 15000, yomi: "イチゴ" },
+  { price: 16000, yomi: "イチロク" }, { price: 20000, yomi: "ニジュー" },
+  { price: 22000, yomi: "ニーニー" }, { price: 24000, yomi: "ニシ" },
+  { price: 25000, yomi: "ニーゴー" }, { price: 30000, yomi: "サンジュー" },
+  { price: 44000, yomi: "チョンチョン" }, { price: 46000, yomi: "シロク" },
+  { price: 50000, yomi: "ゴジュー" }, { price: 51000, yomi: "ゴッピン" },
+  { price: 55000, yomi: "テラ" }, { price: 66000, yomi: "モミ" },
+  { price: 77000, yomi: "カニ" }, { price: 88000, yomi: "パリパリ" },
+];
+
+const TERMS = [
+  { q: "相場より明らかに高い値段で落札すること", a: "飛ぶ（とぶ）", choices: ["ゲソる", "飛ぶ（とぶ）", "泣き", "前山"] },
+  { q: "本来の自分の値段より安く買おうとすること", a: "ゲソる", choices: ["飛ぶ", "ゲソる", "下槍", "保留"] },
+  { q: "買い手がつかなかった商品を直前の落札者に無料でつけること", a: "前山（マエヤマ）", choices: ["保留", "前山（マエヤマ）", "あご", "山変わり"] },
+  { q: "振り直しを要求すること", a: "泣き（なき）", choices: ["泣き（なき）", "下槍", "同槍", "保留"] },
+  { q: "出品者が変わること", a: "山変わり（やまがわり）", choices: ["前山", "山変わり（やまがわり）", "あご", "歩銭"] },
+  { q: "手数料のこと", a: "歩銭（ぶせん）", choices: ["あご", "歩銭（ぶせん）", "保留", "符丁"] },
+  { q: "出品者が希望する最低落札価格", a: "あご（指値）", choices: ["あご（指値）", "発句", "保留", "前山"] },
+  { q: "あごに届かず出品者と交渉する状態", a: "保留（ほりゅう）", choices: ["泣き", "保留（ほりゅう）", "振り直し", "前山"] },
+  { q: "発句の値段より安い価格で槍を出すこと", a: "下槍（したやり）", choices: ["同槍", "下槍（したやり）", "ゲソる", "泣き"] },
+  { q: "買い人同士が同じ金額で声を出すこと", a: "同槍（どうやり）", choices: ["同槍（どうやり）", "下槍", "飛ぶ", "前山"] },
+];
+
+function fmt(n) { return n.toLocaleString("ja-JP") + "円"; }
+function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
+function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function makeWrongPrices(correct) {
+  const pool = FUCHYO_ALL.filter(f => f.price !== correct.price);
+  return shuffle(pool).slice(0, 3);
+}
+function makeWrongYomis(correct) {
+  const pool = FUCHYO_ALL.filter(f => f.yomi !== correct.yomi);
+  return shuffle(pool).slice(0, 3);
+}
+
+// ── 状態 ────────────────────────────────────
+let S = {
+  tab: "menu",
+  mode: null,
+  q: null,
+  choices: [],
+  answered: false,
+  selected: null,
+  score: 0,
+  total: 0,
+  streak: 0,
+  maxStreak: 0,
+  timerVal: 100,
+  timerInterval: null,
+  gameOver: false,
+  usedFuchyo: [],
+  usedTerms: [],
+};
+
+function set(patch) { Object.assign(S, patch); render(); }
+
+function makeQ(mode) {
+  if (mode === "price2yomi" || mode === "timed") {
+    let pool = FUCHYO_ALL.filter((_, i) => !S.usedFuchyo.includes(i));
+    if (pool.length === 0) { S.usedFuchyo = []; pool = FUCHYO_ALL; }
+    const item = pool[Math.floor(Math.random() * pool.length)];
+    S.usedFuchyo.push(FUCHYO_ALL.indexOf(item));
+    const wrongs = makeWrongYomis(item);
+    return { correct: item, choices: shuffle([item, ...wrongs]), type: "price2yomi" };
+  }
+  if (mode === "yomi2price") {
+    let pool = FUCHYO_ALL.filter((_, i) => !S.usedFuchyo.includes(i));
+    if (pool.length === 0) { S.usedFuchyo = []; pool = FUCHYO_ALL; }
+    const item = pool[Math.floor(Math.random() * pool.length)];
+    S.usedFuchyo.push(FUCHYO_ALL.indexOf(item));
+    const wrongs = makeWrongPrices(item);
+    return { correct: item, choices: shuffle([item, ...wrongs]), type: "yomi2price" };
+  }
+  if (mode === "terms") {
+    let pool = TERMS.filter((_, i) => !S.usedTerms.includes(i));
+    if (pool.length === 0) { S.usedTerms = []; pool = TERMS; }
+    const item = pool[Math.floor(Math.random() * pool.length)];
+    S.usedTerms.push(TERMS.indexOf(item));
+    return { correct: item.a, choices: shuffle(item.choices), question: item.q, type: "terms" };
+  }
+}
+
+function startGame(mode) {
+  clearInterval(S.timerInterval);
+  S.usedFuchyo = [];
+  S.usedTerms = [];
+  const q = makeQ(mode);
+  set({ tab: "game", mode, q, choices: q.choices, answered: false, selected: null, score: 0, total: 0, streak: 0, maxStreak: 0, gameOver: false });
+  if (mode === "timed") startTimer();
+}
+
+function startTimer() {
+  clearInterval(S.timerInterval);
+  S.timerVal = 100;
+  S.timerInterval = setInterval(() => {
+    S.timerVal -= 2;
+    if (S.timerVal <= 0) {
+      clearInterval(S.timerInterval);
+      S.timerVal = 0;
+      S.gameOver = true;
+      render();
+    } else {
+      const bar = document.getElementById("timerBar");
+      if (bar) bar.style.width = S.timerVal + "%";
+    }
+  }, 100);
+}
+
+function answer(choice) {
+  if (S.answered) return;
+  const correct = S.q.type === "terms"
+    ? choice === S.q.correct
+    : choice.yomi === S.q.correct.yomi;
+
+  const newStreak = correct ? S.streak + 1 : 0;
+  const newMaxStreak = Math.max(S.maxStreak, newStreak);
+
+  if (S.mode === "timed" && correct) {
+    S.timerVal = Math.min(100, S.timerVal + 20);
+    const bar = document.getElementById("timerBar");
+    if (bar) bar.style.width = S.timerVal + "%";
+  }
+
+  set({
+    answered: true, selected: choice,
+    score: correct ? S.score + 1 : S.score,
+    total: S.total + 1,
+    streak: newStreak,
+    maxStreak: newMaxStreak,
+  });
+}
+
+function next() {
+  if (S.mode === "timed" && S.gameOver) {
+    clearInterval(S.timerInterval);
+    set({ tab: "result" });
+    return;
+  }
+  if (S.total >= 10 && S.mode !== "timed") {
+    clearInterval(S.timerInterval);
+    set({ tab: "result" });
+    return;
+  }
+  const q = makeQ(S.mode);
+  set({ q, choices: q.choices, answered: false, selected: null });
+  if (S.mode === "timed") startTimer();
+}
+
+function getRank(score, total, mode) {
+  if (mode === "timed") {
+    if (score >= 20) return { rank: "🏆 競り師マスター！", msg: "完璧や！もうプロやで！" };
+    if (score >= 15) return { rank: "🥇 一人前の競り師", msg: "かなりええ感じ！" };
+    if (score >= 10) return { rank: "🥈 見習い競り師", msg: "もう少しで完璧！" };
+    return { rank: "🥉 競り初心者", msg: "練習あるのみ！" };
+  }
+  const pct = score / total;
+  if (pct >= 0.9) return { rank: "🏆 競り師マスター！", msg: "完璧や！もうプロやで！" };
+  if (pct >= 0.7) return { rank: "🥇 一人前の競り師", msg: "かなりええ感じ！" };
+  if (pct >= 0.5) return { rank: "🥈 見習い競り師", msg: "もう少しで完璧！" };
+  return { rank: "🥉 競り初心者", msg: "練習あるのみ！" };
+}
+
+// ── レンダー ─────────────────────────────────
+function render() {
+  const { tab, mode, q, choices, answered, selected, score, total, streak, maxStreak, timerVal, gameOver } = S;
+  let html = "";
+
+  const header = `<div class="header"><div>
+    <div class="header-title">🏷️ 競りマスター</div>
+    <div class="header-sub">符丁・用語クイズゲーム</div>
+  </div></div>`;
+
+  // ── メニュー ──
+  if (tab === "menu") {
+    html = header + `<div class="page">
+      <div class="card">
+        <div class="card-title">🎮 ゲームを選んでね</div>
+        <button class="mode-btn" onclick="startGame('price2yomi')">
+          💴 金額→符丁クイズ
+          <div class="mode-btn-sub">金額を見て正しい読み方を選ぼう（10問）</div>
+        </button>
+        <button class="mode-btn" onclick="startGame('yomi2price')">
+          🔊 符丁→金額クイズ
+          <div class="mode-btn-sub">「ドン！！」って言われたらいくら？（10問）</div>
+        </button>
+        <button class="mode-btn" onclick="startGame('timed')">
+          ⏱️ タイムアタック！
+          <div class="mode-btn-sub">制限時間内に何問正解できるか！正解で時間延長！</div>
+        </button>
+        <button class="mode-btn" onclick="startGame('terms')">
+          📚 用語クイズ
+          <div class="mode-btn-sub">「飛ぶ」「ゲソる」などの用語を覚えよう（10問）</div>
+        </button>
+      </div>
+    </div>`;
+  }
+
+  // ── ゲーム画面 ──
+  if (tab === "game") {
+    // タイムアタックでゲームオーバー
+    if (mode === "timed" && gameOver) {
+      const r = getRank(score, total, mode);
+      html = header + `<div class="page">
+        <div class="card final-box">
+          <div style="font-size:18px;color:#e94560;font-weight:700;margin-bottom:10px;">⏱️ タイムアップ！</div>
+          <div class="final-score">${score}問</div>
+          <div class="final-rank">${r.rank}</div>
+          <div class="final-msg">${r.msg}</div>
+          <div style="font-size:12px;color:#a0a0c0;margin-bottom:20px;">最大連続正解：${maxStreak}問</div>
+          <button class="restart-btn" onclick="set({tab:'menu'})">🏠 メニューに戻る</button>
+          <button class="restart-btn" style="margin-top:8px;background:#0f3460;" onclick="startGame('${mode}')">🔄 もう一回！</button>
+        </div>
+      </div>`;
+      document.getElementById("app").innerHTML = html;
+      return;
+    }
+
+    const timerHtml = mode === "timed" ? `
+      <div class="timer-bar-wrap">
+        <div class="timer-bar" id="timerBar" style="width:${timerVal}%"></div>
+      </div>` : "";
+
+    // 問題表示
+    let questionHtml = "";
+    if (q.type === "price2yomi") {
+      questionHtml = `<div class="question-box">
+        <div class="question-sub">この金額の符丁は？</div>
+        <div class="question-main">${fmt(q.correct.price)}</div>
+      </div>`;
+    } else if (q.type === "yomi2price") {
+      questionHtml = `<div class="question-box">
+        <div class="question-sub">この符丁はいくら？</div>
+        <div class="question-main" style="font-size:28px;">${q.correct.yomi}！！</div>
+      </div>`;
+    } else {
+      questionHtml = `<div class="question-box">
+        <div class="question-sub">この説明は何のこと？</div>
+        <div class="question-main" style="font-size:18px;line-height:1.4;">${q.question}</div>
+      </div>`;
+    }
+
+    // 選択肢
+    const choiceHtml = choices.map(c => {
+      const label = q.type === "price2yomi" ? c.yomi + "！！"
+        : q.type === "yomi2price" ? fmt(c.price)
+        : c;
+      const isCorrect = q.type === "terms"
+        ? c === q.correct
+        : c.yomi === q.correct.yomi;
+      const isSelected = q.type === "terms"
+        ? selected === c
+        : selected && selected.yomi === c.yomi;
+
+      let cls = "choice-btn";
+      if (answered) {
+        if (isCorrect) cls += " reveal";
+        if (isSelected && !isCorrect) cls += " wrong";
+      }
+      return `<button class="${cls}" onclick="answer(${JSON.stringify(q.type === "terms" ? c : c).replace(/"/g,"'")})" ${answered ? "disabled" : ""}>${label}</button>`;
+    }).join("");
+
+    // 結果
+    let resultHtml = "";
+    if (answered) {
+      const isCorrect = q.type === "terms"
+        ? selected === q.correct
+        : selected && selected.yomi === q.correct.yomi;
+      const correctLabel = q.type === "price2yomi" ? q.correct.yomi + "！！"
+        : q.type === "yomi2price" ? fmt(q.correct.price)
+        : q.correct;
+      resultHtml = `
+        <div class="result-box ${isCorrect ? "result-correct" : "result-wrong"}">
+          <div class="result-text">${isCorrect ? "✅ 正解！" : "❌ 不正解"}</div>
+          ${!isCorrect ? `<div class="result-desc">正解は「${correctLabel}」やで</div>` : ""}
+          ${streak > 1 ? `<div style="font-size:12px;color:#ffd700;margin-top:4px;">🔥 ${streak}連続正解！</div>` : ""}
+        </div>
+        <button class="next-btn" onclick="next()">${mode !== "timed" && total >= 10 ? "結果を見る" : "次の問題 →"}</button>`;
+    }
+
+    const progressLabel = mode === "timed" ? `正解：${score}問` : `${total}/10問`;
+
+    html = header + `<div class="page">
+      <div class="game-score">
+        <div class="score-item"><div class="score-num">${score}</div><div class="score-label">正解</div></div>
+        <div class="score-item"><div class="score-num">${streak}</div><div class="score-label">🔥連続</div></div>
+        <div class="score-item"><div class="score-num">${mode === "timed" ? total : total + "/" + 10}</div><div class="score-label">問目</div></div>
+      </div>
+      ${timerHtml}
+      ${questionHtml}
+      <div class="choices">${choiceHtml}</div>
+      ${resultHtml}
+    </div>`;
+  }
+
+  // ── 結果画面 ──
+  if (tab === "result") {
+    const r = getRank(score, total, mode);
+    html = header + `<div class="page">
+      <div class="card final-box">
+        <div style="font-size:14px;color:#a0a0c0;margin-bottom:8px;">最終結果</div>
+        <div class="final-score">${score}/${total}</div>
+        <div class="final-rank">${r.rank}</div>
+        <div class="final-msg">${r.msg}</div>
+        <div style="font-size:12px;color:#a0a0c0;margin-bottom:20px;">最大連続正解：${maxStreak}問</div>
+        <button class="restart-btn" onclick="set({tab:'menu'})">🏠 メニューに戻る</button>
+        <button class="restart-btn" style="margin-top:8px;background:#0f3460;" onclick="startGame('${mode}')">🔄 もう一回！</button>
+      </div>
+    </div>`;
+  }
+
+  document.getElementById("app").innerHTML = html;
+}
+
+// 選択肢のJSON渡しを修正
+function answer(choice) {
+  if (S.answered) return;
+  let correct;
+  if (S.q.type === "terms") {
+    correct = choice === S.q.correct;
+  } else {
+    correct = choice && choice.yomi === S.q.correct.yomi;
+  }
+  const newStreak = correct ? S.streak + 1 : 0;
+  const newMaxStreak = Math.max(S.maxStreak, newStreak);
+  if (S.mode === "timed" && correct) {
+    S.timerVal = Math.min(100, S.timerVal + 20);
+  }
+  Object.assign(S, {
+    answered: true, selected: choice,
+    score: correct ? S.score + 1 : S.score,
+    total: S.total + 1,
+    streak: newStreak,
+    maxStreak: newMaxStreak,
+  });
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
