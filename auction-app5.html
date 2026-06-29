@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="競り攻略アプリ">
+<title>競り攻略アプリ</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: 'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;
+  background: #1a1a2e; min-height: 100vh;
+  max-width: 430px; margin: 0 auto; color: #fff;
+}
+.header {
+  background: #16213e; border-bottom: 2px solid #e94560;
+  padding: 13px 16px; position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 10px;
+}
+.back-btn {
+  background: none; border: none; font-size: 20px;
+  cursor: pointer; color: #e94560; padding: 2px 4px;
+}
+.header-title { font-size: 16px; font-weight: 700; }
+.header-sub { font-size: 10px; color: #a0a0c0; margin-top: 1px; }
+
+/* タブ */
+.tabs {
+  display: flex; background: #16213e;
+  border-bottom: 2px solid #0f3460; position: sticky; top: 52px; z-index: 19;
+}
+.tab {
+  flex: 1; padding: 12px 0; font-size: 12px; font-weight: 700;
+  text-align: center; cursor: pointer; color: #a0a0c0;
+  border-bottom: 3px solid transparent; font-family: inherit;
+  background: none; border-top: none; border-left: none; border-right: none;
+  transition: all .15s;
+}
+.tab.active { color: #e94560; border-bottom-color: #e94560; }
+
+.page { padding: 16px 16px 40px; display: flex; flex-direction: column; gap: 14px; }
+
+/* カード */
+.card {
+  background: #16213e; border-radius: 14px; padding: 16px;
+  border: 1px solid #0f3460;
+}
+.card-title {
+  font-size: 13px; font-weight: 700; color: #e94560;
+  margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+}
+
+/* シミュレーター */
+.price-display {
+  text-align: center; padding: 20px;
+  background: #0f3460; border-radius: 12px; margin-bottom: 14px;
+}
+.price-main { font-size: 42px; font-weight: 900; color: #e94560; line-height: 1; }
+.price-yomi { font-size: 20px; color: #ffd700; font-weight: 700; margin-top: 4px; }
+.price-unit { font-size: 11px; color: #a0a0c0; margin-top: 4px; }
+
+.sim-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sim-btn {
+  padding: 14px 0; border-radius: 10px; font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: inherit; border: none; transition: opacity .15s;
+}
+.sim-btn:active { opacity: 0.7; }
+.btn-up { background: #e94560; color: #fff; }
+.btn-down { background: #0f3460; color: #a0a0c0; border: 1px solid #a0a0c0; }
+.btn-reset { background: #333; color: #fff; grid-column: 1/-1; padding: 12px; font-size: 13px; }
+
+.limit-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 10px;
+}
+.limit-input {
+  flex: 1; background: #0f3460; border: 1px solid #e94560;
+  border-radius: 8px; padding: 10px 12px; font-size: 14px;
+  color: #fff; font-family: inherit; outline: none;
+}
+.limit-label { font-size: 12px; color: #a0a0c0; white-space: nowrap; }
+
+.warning {
+  background: #e9456022; border: 1.5px solid #e94560;
+  border-radius: 10px; padding: 12px; text-align: center;
+  font-size: 14px; font-weight: 700; color: #e94560;
+  animation: pulse 1s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+.safe { background: #1a4a2e; border: 1.5px solid #48bb78; border-radius: 10px; padding: 10px; text-align: center; font-size: 12px; color: #48bb78; }
+
+/* 符丁表 */
+.fuchyo-grid { display: flex; flex-direction: column; gap: 6px; }
+.fuchyo-row {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #0f3460; border-radius: 8px; padding: 10px 14px;
+}
+.fuchyo-price { font-size: 14px; font-weight: 700; color: #ffd700; }
+.fuchyo-yomi { font-size: 16px; font-weight: 900; color: #fff; }
+.fuchyo-arrow { color: #e94560; font-size: 12px; }
+
+.section-label {
+  font-size: 11px; font-weight: 700; color: #a0a0c0;
+  text-transform: uppercase; letter-spacing: 1px;
+  margin: 4px 0 6px;
+}
+
+/* 用語集 */
+.term-card {
+  background: #0f3460; border-radius: 10px; padding: 12px 14px;
+  border-left: 3px solid #e94560;
+}
+.term-name { font-size: 14px; font-weight: 700; color: #ffd700; margin-bottom: 4px; }
+.term-read { font-size: 11px; color: #a0a0c0; margin-bottom: 4px; }
+.term-desc { font-size: 12px; color: #d0d0e0; line-height: 1.6; }
+
+/* 数字の読み方 */
+.num-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+.num-card {
+  background: #0f3460; border-radius: 8px; padding: 10px;
+  text-align: center;
+}
+.num-num { font-size: 22px; font-weight: 900; color: #ffd700; }
+.num-yomi { font-size: 11px; color: #a0a0c0; margin-top: 2px; }
+
+/* ルール */
+.rule-item {
+  background: #0f3460; border-radius: 10px; padding: 12px 14px;
+  border-left: 3px solid #ffd700;
+}
+.rule-title { font-size: 13px; font-weight: 700; color: #ffd700; margin-bottom: 4px; }
+.rule-desc { font-size: 12px; color: #d0d0e0; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+
+// ── 符丁データ ──────────────────────────────
+const FUCHYO_UNDER = [
+  { price: 1000,  yomi: "センエン！！" },
+  { price: 1500,  yomi: "センゴ！！" },
+  { price: 2000,  yomi: "ニー！！" },
+  { price: 2500,  yomi: "ニーゴー！！" },
+  { price: 3000,  yomi: "サン！！" },
+  { price: 3500,  yomi: "サンゴ！！" },
+  { price: 4000,  yomi: "シ！！" },
+  { price: 4500,  yomi: "シーゴ！！" },
+  { price: 5000,  yomi: "ゴセン！！" },
+  { price: 5500,  yomi: "ゴーゴ！！" },
+  { price: 6000,  yomi: "ロク！！" },
+  { price: 6500,  yomi: "ロクゴ！！" },
+  { price: 7000,  yomi: "ナナ！！" },
+  { price: 7500,  yomi: "ナナゴ！！" },
+  { price: 8000,  yomi: "ハチ！！" },
+  { price: 8500,  yomi: "パーゴ！！" },
+  { price: 9000,  yomi: "キュー！！" },
+  { price: 9500,  yomi: "キューゴ！！" },
+];
+
+const FUCHYO_OVER = [
+  { price: 10000, yomi: "ドン！！" },
+  { price: 11000, yomi: "イチイチ！！" },
+  { price: 12000, yomi: "イチニー！！" },
+  { price: 13000, yomi: "イチサン！！" },
+  { price: 14000, yomi: "イチシ！！" },
+  { price: 15000, yomi: "イチゴ！！" },
+  { price: 16000, yomi: "イチロク！！" },
+  { price: 17000, yomi: "イチナナ！！" },
+  { price: 18000, yomi: "イチハチ！！" },
+  { price: 19000, yomi: "イチキュー！！" },
+  { price: 20000, yomi: "ニジュー！！" },
+  { price: 21000, yomi: "ニイチ！！" },
+  { price: 22000, yomi: "ニーニー！！" },
+  { price: 24000, yomi: "ニシ！！" },
+  { price: 25000, yomi: "ニーゴー！！" },
+  { price: 30000, yomi: "サンジュー！！" },
+  { price: 33000, yomi: "サブサン！！" },
+  { price: 44000, yomi: "チョンチョン！！" },
+  { price: 46000, yomi: "シロク！！" },
+  { price: 50000, yomi: "ゴジュー！！" },
+  { price: 51000, yomi: "ゴッピン！！" },
+  { price: 55000, yomi: "テラ！！" },
+  { price: 66000, yomi: "モミ！！" },
+  { price: 77000, yomi: "カニ！！" },
+  { price: 88000, yomi: "パリパリ！！" },
+];
+
+// ── 用語集 ──────────────────────────────────
+const TERMS = [
+  { name: "飛ぶ（とぶ）", desc: "相場の価格より明らかに高い値段で落札すること" },
+  { name: "ゲソる（げそる）", desc: "本来の自分の値段より、安く買おうとすること" },
+  { name: "前山（マエヤマ）", desc: "買い手がつかなかった商品を、その直前の商品の落札者に無料でつけること" },
+  { name: "泣き（なき）", desc: "振り直しを要求すること" },
+  { name: "符丁（ふちょう）", desc: "市場では価格によって言葉が決まっていて、その言葉を発すると振り師が認識してくれる" },
+  { name: "振り師（ふりし）", desc: "競り開始の合図をする人。主に中央で商品を紹介して競りを開始する" },
+  { name: "帳場（ちょうば）", desc: "競り結果を入力している人、場所" },
+  { name: "発句（ほっく）", desc: "振り師が発する競り初めの金額のこと" },
+  { name: "買い発句（かいほっく）", desc: "振り師が自分が買いたい値段で発句すること。誰もいなければ振り師が落札者となる" },
+  { name: "声を出す（こえをだす）", desc: "買い人が、買いたい金額を発声すること。声とともに指サインで金額を伝えるとよりGood" },
+  { name: "槍（やり）", desc: "買い人が発する競り落としたい金額" },
+  { name: "同槍（どうやり）", desc: "買い人同士が同じ金額で声を出すこと" },
+  { name: "下槍（したやり）", desc: "発句の値段より安い価格で槍を出すこと。寒い空気が流れるので「すみません」と謝りましょう" },
+  { name: "山変わり（やまがわり）", desc: "出品者が変わること、またはそのタイミング" },
+  { name: "歩銭（ぶせん）", desc: "手数料のこと。落札手数料を買い歩（かいぶ）、販売手数料を売り歩（うりぶ）ということがある" },
+  { name: "あご", desc: "出品者が希望する最低落札価格のこと。指値（さしね）ともいう。その価格より安い価格で競りが終了した場合、直ちに落札とはならず出品者に確認して落札できるかどうかが決まる" },
+  { name: "保留（ほりゅう）", desc: "あご（指値）に届かず、出品者と交渉する状態" },
+  { name: "振り直し（ふりなおし）", desc: "自分が落札した商品に真贋/状態の見落とし等があった場合、振り師に申し出ることでやり直しが可能な場合がある" },
+];
+
+// ── 数字の読み方 ────────────────────────────
+const NUMS = [
+  { n: "1", yomi: "イチ / ピン" },
+  { n: "2", yomi: "ニ" },
+  { n: "3", yomi: "サン / サブ" },
+  { n: "4", yomi: "シ / ヨン / チョン" },
+  { n: "5", yomi: "ゴ" },
+  { n: "6", yomi: "ロク / ロー" },
+  { n: "7", yomi: "ナナ / シチ / ナ" },
+  { n: "8", yomi: "ハチ / バー / ヤ" },
+  { n: "9", yomi: "キュウ / ク" },
+  { n: "0", yomi: "ジュウ / マル" },
+  { n: "千", yomi: "セン" },
+  { n: "万", yomi: "ドン / マン" },
+];
+
+// ── ユーティリティ ──────────────────────────
+function getStep(price) {
+  return price < 10000 ? 500 : 1000;
+}
+
+function getYomi(price) {
+  const all = [...FUCHYO_UNDER, ...FUCHYO_OVER];
+  const found = all.find(f => f.price === price);
+  if (found) return found.yomi;
+  if (price < 10000) {
+    const man = Math.floor(price / 1000);
+    const sen = (price % 1000) / 500;
+    if (sen === 0) return `${numToYomi(man)}！！`;
+    return `${numToYomi(man)}ゴー！！`;
+  } else {
+    const man = Math.floor(price / 10000);
+    const sen = Math.floor((price % 10000) / 1000);
+    if (sen === 0) return `${numToYomi(man)}ジュー！！`;
+    return `${numToYomi(man)}${numToYomi(sen)}！！`;
+  }
+}
+
+function numToYomi(n) {
+  const map = ["","イチ","ニ","サン","シ","ゴ","ロク","ナナ","ハチ","キュウ"];
+  return map[n] || n;
+}
+
+function fmt(n) {
+  return n.toLocaleString("ja-JP") + "円";
+}
+
+// ── 状態 ────────────────────────────────────
+let S = {
+  tab: "sim",  // sim | fuchyo | terms | rules
+  price: 10000,
+  limit: "",
+};
+
+function set(patch) { Object.assign(S, patch); render(); }
+
+
+function setStartPrice(val) {
+  const n = parseInt(val);
+  if (!n || n < 500) return;
+  const step = n < 10000 ? 500 : 1000;
+  const adjusted = Math.round(n / step) * step;
+  set({ price: adjusted });
+}
+function priceUp() {
+  set({ price: S.price + getStep(S.price) });
+}
+function priceDown() {
+  const step = getStep(S.price - 1);
+  const next = S.price - step;
+  if (next >= 500) set({ price: next });
+}
+
+// ── レンダー ─────────────────────────────────
+function render() {
+  const { tab, price, limit } = S;
+  const limitNum = parseInt(limit.replace(/,/g,"")) || 0;
+  const isOver = limitNum > 0 && price > limitNum;
+  const isNear = limitNum > 0 && !isOver && price >= limitNum - getStep(price);
+
+  let content = "";
+
+  // ── シミュレーター ──
+  if (tab === "sim") {
+    const yomi = getYomi(price);
+    const step = getStep(price);
+
+    let limitStatus = "";
+    if (isOver) {
+      limitStatus = `<div class="warning">⚠️ 上限超え！ここで入れたらあかん！</div>`;
+    } else if (isNear) {
+      limitStatus = `<div style="background:#7a5a0022;border:1.5px solid #ffd700;border-radius:10px;padding:10px;text-align:center;font-size:12px;color:#ffd700;">⚡ 上限まであと${fmt(limitNum - price)}！次が最後やで</div>`;
+    } else if (limitNum > 0) {
+      limitStatus = `<div class="safe">✅ あと${fmt(limitNum - price)}まで入れられる</div>`;
+    }
+
+    content = `
+      <div class="page">
+        <div class="card">
+          <div class="card-title">🎯 上限金額を設定</div>
+          <div class="limit-row">
+            <span class="limit-label">上限</span>
+            <input class="limit-input" type="number" placeholder="例：15000" value="${limit}"
+              oninput="S.limit=this.value;render()">
+            <span class="limit-label">円</span>
+          </div>
+          ${limitNum > 0 ? limitStatus : ""}
+        </div>
+
+        <div class="card">
+          <div class="card-title">🔊 現在の競り値</div>
+          <div class="limit-row" style="margin-bottom:10px;">
+            <span class="limit-label">発句</span>
+            <input class="limit-input" type="number" placeholder="例：5000" id="startInput"
+              onblur="setStartPrice(this.value)" onkeydown="if(event.key==='Enter')setStartPrice(this.value)">
+            <span class="limit-label">円から</span>
+          </div>
+          <div class="price-display">
+            <div class="price-main">${fmt(price)}</div>
+            <div class="price-yomi">${getYomi(price)}</div>
+            <div class="price-unit">刻み：${fmt(step)}</div>
+          </div>
+          <div class="sim-btns">
+            <button class="sim-btn btn-up" onclick="priceUp()">▲ 上げる<br><span style="font-size:11px">${fmt(price + step)} / ${getYomi(price + step)}</span></button>
+            <button class="sim-btn btn-down" onclick="priceDown()">▼ 下げる<br><span style="font-size:11px">${price - step >= 500 ? fmt(price - getStep(price-1)) : "--"}</span></button>
+            <button class="sim-btn btn-reset" onclick="set({price:10000})">🔄 リセット（ドンから）</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📝 覚えておくルール</div>
+          <div style="font-size:12px;color:#d0d0e0;line-height:1.8;">
+            ✅ 1万未満は<strong style="color:#ffd700;">500円</strong>刻み<br>
+            ✅ 1万以上は<strong style="color:#ffd700;">1000円</strong>刻み<br>
+            ❌ 12,500円などの中途半端はNG！<br>
+            ✅ 振り師の発句と同時に声・指を出す！<br>
+            ⚡ チョイノリ・後ノリはマナー違反！
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // ── 符丁表 ──
+  if (tab === "fuchyo") {
+    const underRows = FUCHYO_UNDER.map(f => `
+      <div class="fuchyo-row">
+        <span class="fuchyo-price">${fmt(f.price)}</span>
+        <span class="fuchyo-arrow">→</span>
+        <span class="fuchyo-yomi">${f.yomi}</span>
+      </div>`).join("");
+    const overRows = FUCHYO_OVER.map(f => `
+      <div class="fuchyo-row">
+        <span class="fuchyo-price">${fmt(f.price)}</span>
+        <span class="fuchyo-arrow">→</span>
+        <span class="fuchyo-yomi">${f.yomi}</span>
+      </div>`).join("");
+
+    content = `
+      <div class="page">
+        <div class="card">
+          <div class="card-title">💴 1万円未満（500円刻み）</div>
+          <div class="fuchyo-grid">${underRows}</div>
+        </div>
+        <div class="card">
+          <div class="card-title">💴 1万円以上（1000円刻み）</div>
+          <div class="fuchyo-grid">${overRows}</div>
+        </div>
+        <div class="card">
+          <div class="card-title">🔢 数字の読み方</div>
+          <div class="num-grid">
+            ${NUMS.map(n => `<div class="num-card"><div class="num-num">${n.n}</div><div class="num-yomi">${n.yomi}</div></div>`).join("")}
+          </div>
+          <div style="font-size:11px;color:#a0a0c0;margin-top:10px;line-height:1.6;">
+            例）2万1千円→ニイチ　3万6千円→サブロク　7万8千円→シチヤ
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // ── 用語集 ──
+  if (tab === "terms") {
+    content = `
+      <div class="page">
+        <div class="card">
+          <div class="card-title">📚 市場用語集</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            ${TERMS.map(t => `
+              <div class="term-card">
+                <div class="term-name">${t.name}</div>
+                <div class="term-desc">${t.desc}</div>
+              </div>`).join("")}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // ── ルール ──
+  if (tab === "rules") {
+    const rules = [
+      { title: "商品が流れているとき", desc: "商品はどんどん次の人に回そう！確認したらどんどん次に回しましょう。あなたの後の人も見たいので思いやりを持って！" },
+      { title: "流れを止めないようにしよう！", desc: "気になる商品があり、しっかり確認したい商品は手元（膝の上）に引いてチェックしよう。次の商品を先に回して流れを止めないようにします。" },
+      { title: "山変わり時の対応", desc: "出品者が変わるタイミング（山変わり）では、区切りとなる目印があります。その前後の商品を混ぜないように注意しよう。" },
+      { title: "振り直しについて", desc: "自分が落札した商品に真贋/状態の見落とし等があった場合、振り師に申し出ることでやり直しが可能な場合があります。事前に確認しておくことが前提。振り師や他のお客様に「すみません！！」と伝えましょう。" },
+      { title: "マナー：チョイノリ・後ノリNG！", desc: "意図的に周りの声を聞いてから遅れて声を出すはマナー違反！自分の値段に自信を持って振り師の発句と同時に声・指を出しましょう！" },
+      { title: "下槍に注意！", desc: "発句の値段より安い価格で槍を出すこと。寒い空気が流れるので「すみません」と謝りましょう。例：2万円発句に対し、1万5千円といってしまったとき。" },
+      { title: "あご（指値）について", desc: "出品者が希望する最低落札価格。その価格より安い価格で競りが終了した場合、直ちに落札とはならず出品者に確認が必要。" },
+    ];
+    content = `
+      <div class="page">
+        ${rules.map(r => `
+          <div class="rule-item">
+            <div class="rule-title">📌 ${r.title}</div>
+            <div class="rule-desc">${r.desc}</div>
+          </div>`).join("")}
+      </div>
+    `;
+  }
+
+  document.getElementById("app").innerHTML = `
+    <div class="header">
+      <div>
+        <div class="header-title">🏷️ 競り攻略アプリ</div>
+        <div class="header-sub">アパレルオークション完全対応</div>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab${tab==="sim"?" active":""}" onclick="set({tab:'sim'})">🎯 シミュ</button>
+      <button class="tab${tab==="fuchyo"?" active":""}" onclick="set({tab:'fuchyo'})">💴 符丁表</button>
+      <button class="tab${tab==="terms"?" active":""}" onclick="set({tab:'terms'})">📚 用語集</button>
+      <button class="tab${tab==="rules"?" active":""}" onclick="set({tab:'rules'})">📌 ルール</button>
+    </div>
+    ${content}
+  `;
+}
+
+render();
+</script>
+</body>
+</html>
